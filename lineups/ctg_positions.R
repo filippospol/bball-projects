@@ -22,7 +22,7 @@
 
 ctg_positions = function(season, sec_cut = 10) {
   pacman::p_load(tidyverse, hoopR)
-  source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/mergeStats.R")
+  source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/misc/mergeStats.R")
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
 
   # NBA.com identity (ids + team), fuzzy-matched onto bbref by name:
