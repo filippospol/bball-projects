@@ -23,10 +23,10 @@
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
-  pacman::p_load(tidyverse)
-  # mclust + clue are used by NAMESPACE only (never attached): mclust exports its own
-  # map() which would mask purrr::map and break bbref_helpers' unqualified map() calls.
-  for (p in c("mclust", "clue")) if (!requireNamespace(p, quietly = TRUE)) install.packages(p)
+  # Attach mclust + clue FIRST, then tidyverse LAST. mclust must be attached (its Mclust()
+  # calls mclustBIC() internally), but if it loads AFTER purrr its map() masks purrr::map()
+  # and breaks bbref_helpers' unqualified map(). Loading tidyverse last keeps purrr on top.
+  pacman::p_load(mclust, clue, tidyverse)
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
 
   key   = c("SEASON", "PLAYER_NAME", "TEAM")
