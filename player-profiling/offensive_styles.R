@@ -31,6 +31,11 @@ offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   # (Mclust() calls mclustBIC() internally and finds it ONLY while mclust is attached -- hence
   #  the wrapper rather than plain mclust::Mclust().)
   if (!requireNamespace("mclust", quietly = TRUE)) install.packages("mclust")
+  # A PRIOR run in this SAME R session may have left mclust ATTACHED (older script versions did
+  # p_load(mclust)). Its map() then masks purrr::map() and breaks bbref_helpers' map() during the
+  # pull -> "In index: 1 ... numeric() invalid 'length'". Detach it here so a long-lived session
+  # heals itself without a restart; with_package() re-attaches mclust only for the GMM call below.
+  while ("package:mclust" %in% search()) detach("package:mclust", unload = FALSE)
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
 
   key   = c("SEASON", "PLAYER_NAME", "TEAM")
