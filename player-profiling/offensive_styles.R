@@ -23,10 +23,14 @@
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
-  # Attach mclust + clue FIRST, then tidyverse LAST. mclust must be attached (its Mclust()
-  # calls mclustBIC() internally), but if it loads AFTER purrr its map() masks purrr::map()
-  # and breaks bbref_helpers' unqualified map(). Loading tidyverse last keeps purrr on top.
-  pacman::p_load(mclust, clue, tidyverse)
+  pacman::p_load(clue, withr, tidyverse)
+  # mclust is needed for Mclust(), but it must NEVER stay attached: it exports its own map(),
+  # which masks purrr::map() and breaks bbref_helpers' unqualified map() during the data pull.
+  # So we install it namespace-only (attaching nothing to the search path) and attach it ONLY
+  # for the GMM calls, via with_package(), which detaches it again the instant each call ends.
+  # (Mclust() calls mclustBIC() internally and finds it ONLY while mclust is attached -- hence
+  #  the wrapper rather than plain mclust::Mclust().)
+  if (!requireNamespace("mclust", quietly = TRUE)) install.packages("mclust")
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
 
   key   = c("SEASON", "PLAYER_NAME", "TEAM")
@@ -59,7 +63,7 @@ offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   wv  = ifelse(feats %in% wcol, 1.8, 1)
   Zq  = zmat(qual)
   pc  = prcomp(sweep(Zq, 2, wv, "*"), center = FALSE, scale. = FALSE)
-  gm  = mclust::Mclust(pc$x[, 1:7], G = 8, modelNames = "VVV", verbose = FALSE)
+  gm  = with_package("mclust", Mclust(pc$x[, 1:7], G = 8, modelNames = "VVV", verbose = FALSE))
   qual$cl = gm$classification; qual$PROB = apply(gm$z, 1, max)
 
   # ---- auto-label 8 clusters from z-centroids ----
@@ -80,7 +84,7 @@ offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   # ---- assign below-floor players to nearest style (flagged) ----
   sub = dat %>% filter(!(MPG >= min_mpg & GP >= GP_FLOOR))
   if (nrow(sub)) {
-    pr = predict(gm, predict(pc, sweep(zmat(sub), 2, wv, "*"))[, 1:7])
+    pr = with_package("mclust", predict(gm, predict(pc, sweep(zmat(sub), 2, wv, "*"))[, 1:7]))
     sub$cl = pr$classification; sub$PROB = apply(pr$z, 1, max)
   }
 
