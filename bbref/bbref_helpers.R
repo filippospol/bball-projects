@@ -109,7 +109,9 @@ bbref_read = function(url, max_tries = 3) {
   cls  = rows %>% html_attr("class") %>% tidyr::replace_na("")
   rows = rows[!str_detect(cls, drop_class)]
   getcol = function(stat) rows %>% html_element(sprintf("[data-stat='%s']", stat)) %>% html_text2()
-  df = stat_names %>% rlang::set_names() %>% map(getcol) %>% as_tibble()
+  # purrr::map qualified on purpose: a caller may have mclust attached (it exports its own
+  # map(), which would turn this into mclust::map() and fail with numeric()/'invalid length').
+  df = stat_names %>% rlang::set_names() %>% purrr::map(getcol) %>% as_tibble()
   # a href-derived nba team code, when the identity column is a full team name with a link
   df
 }
