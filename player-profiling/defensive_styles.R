@@ -24,7 +24,8 @@
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
 defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
-  pacman::p_load(tidyverse, clue)
+  pacman::p_load(tidyverse)
+  if (!requireNamespace("clue", quietly = TRUE)) install.packages("clue")  # used by namespace, not attached
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
 
   key   = c("SEASON", "PLAYER_NAME", "TEAM")
@@ -71,7 +72,7 @@ defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
     "Low Activity"    = c(BLK_PCT=-1, STL_PCT=-1, PF_PER_POSS=-1, DRB_PCT=-0.5))
   pm = matrix(0, length(proto), length(feats), dimnames = list(names(proto), feats))
   for (s in names(proto)) pm[s, names(proto[[s]])] = proto[[s]]
-  lab = setNames(colnames(cent %*% t(pm))[as.integer(solve_LSAP(cent %*% t(pm), maximum = TRUE))], sort(unique(qual$cl)))
+  lab = setNames(colnames(cent %*% t(pm))[as.integer(clue::solve_LSAP(cent %*% t(pm), maximum = TRUE))], sort(unique(qual$cl)))
 
   # ---- below-floor players -> nearest k-means centroid (flagged) ----
   sub = dat %>% filter(!(MPG >= min_mpg & GP >= GP_FLOOR))
