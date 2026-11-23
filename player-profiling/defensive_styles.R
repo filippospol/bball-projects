@@ -9,9 +9,10 @@
 # Features are z-scored WITHIN each season (defensive stats drift less than shot
 # profile, but this keeps the two engines consistent and era-robust).
 #
-# Qualifier = MPG >= min_mpg AND GP >= min_gp. Below-floor players (incl. everyone
-# in an in-progress season until they reach min_gp) are assigned to their nearest
-# style (nearest centroid) and flagged LOW_SAMPLE = TRUE.
+# Qualifier = MPG >= min_mpg AND GP >= floor, where floor = min_gp for a completed
+# season but auto-drops to half the games played in an IN-PROGRESS season (fits on
+# current data alone). Below-floor players are assigned to their nearest style
+# (nearest centroid) and flagged LOW_SAMPLE = TRUE.
 #
 # NOTE: bbref has no defensive tracking/matchup data, so these styles are built from
 # activity (block/steal/rebound/fouls) + position estimate. Adding tracking/matchup
@@ -25,10 +26,10 @@
 defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   pacman::p_load(tidyverse, clue)
   source("https://raw.githubusercontent.com/filippospol/bball-projects/refs/heads/main/bbref/bbref_player_stats.R")
-  
+
   key   = c("SEASON", "PLAYER_NAME", "TEAM")
   feats = c("BLK_PCT","STL_PCT","DRB_PCT","PCT_1","PCT_5","PF_PER_POSS")
-  
+
   pull = function(mode) map_dfr(seasons, ~ bbref_player_stats(.x, mode = mode))
   adv = pull("advanced"); pbp = pull("play_by_play"); p100 = pull("per100")
   dat = adv %>%
@@ -39,10 +40,11 @@ defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
     filter(if (any(str_detect(TEAM, "/"))) str_detect(TEAM, "/") else TRUE) %>% slice(1) %>% ungroup() %>%
     mutate(across(all_of(feats), as.numeric), GP = as.numeric(GP),
            MPG = as.numeric(MIN) / GP) %>%
+    group_by(SEASON) %>% mutate(GP_FLOOR = pmin(min_gp, 0.5 * max(GP, na.rm = TRUE))) %>% ungroup() %>%
     mutate(across(all_of(feats), ~ replace_na(., median(., na.rm = TRUE))))
-  
-  qual = dat %>% filter(MPG >= min_mpg, GP >= min_gp)
-  
+
+  qual = dat %>% filter(MPG >= min_mpg, GP >= GP_FLOOR)
+
   # ---- season-relative z-scoring (stats learned on qualified players) ----
   sstats = qual %>% group_by(SEASON) %>%
     summarise(across(all_of(feats), list(m = ~mean(.x), s = ~sd(.x)), .names = "{.col}.{.fn}"), .groups = "drop")
@@ -52,11 +54,11 @@ defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   }
   Zq = zmat(qual)
   pc = prcomp(Zq, center = FALSE, scale. = FALSE)
-  
+
   set.seed(0)
   km = kmeans(pc$x[, 1:5], centers = 7, nstart = 25)
   qual$cl = km$cluster
-  
+
   # ---- auto-label 7 clusters from z-centroids ----
   cent = t(sapply(sort(unique(qual$cl)), function(k) colMeans(Zq[qual$cl == k, , drop = FALSE]))); colnames(cent) = feats
   proto = list(
@@ -70,14 +72,14 @@ defensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
   pm = matrix(0, length(proto), length(feats), dimnames = list(names(proto), feats))
   for (s in names(proto)) pm[s, names(proto[[s]])] = proto[[s]]
   lab = setNames(colnames(cent %*% t(pm))[as.integer(solve_LSAP(cent %*% t(pm), maximum = TRUE))], sort(unique(qual$cl)))
-  
+
   # ---- below-floor players -> nearest k-means centroid (flagged) ----
-  sub = dat %>% filter(!(MPG >= min_mpg & GP >= min_gp))
+  sub = dat %>% filter(!(MPG >= min_mpg & GP >= GP_FLOOR))
   if (nrow(sub)) {
     Ps = predict(pc, zmat(sub))[, 1:5]
     sub$cl = apply(Ps, 1, function(r) which.min(colSums((t(km$centers) - r)^2)))
   }
-  
+
   bind_rows(mutate(qual, LOW_SAMPLE = FALSE), if (nrow(sub)) mutate(sub, LOW_SAMPLE = TRUE)) %>%
     mutate(STYLE = lab[as.character(cl)]) %>%
     transmute(SEASON, PLAYER_NAME, TEAM, POS, MPG = round(MPG, 1), STYLE, LOW_SAMPLE) %>%
