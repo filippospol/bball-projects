@@ -84,7 +84,8 @@ offensive_styles = function(seasons, min_mpg = 15, min_gp = 25) {
     "Roll & Cut Big"       = c(PCT_FGA_00_03=2, PCT_FGA_DUNK=2, ORB_PCT=1.5, PCT_FGA_FG3A=-2, AVG_DIST=-2, AST_PCT=-0.8))
   pm = matrix(0, length(proto), length(feats), dimnames = list(names(proto), feats))
   for (s in names(proto)) pm[s, names(proto[[s]])] = proto[[s]]
-  lab = setNames(colnames(cent %*% t(pm))[as.integer(clue::solve_LSAP(cent %*% t(pm), maximum = TRUE))], sort(unique(qual$cl)))
+  sc  = cent %*% t(pm); sc = sc - min(sc)   # solve_LSAP needs nonnegative entries; a constant shift leaves the argmax assignment unchanged
+  lab = setNames(colnames(sc)[as.integer(clue::solve_LSAP(sc, maximum = TRUE))], sort(unique(qual$cl)))
 
   # ---- assign below-floor players to nearest style (flagged) ----
   sub = dat %>% filter(!(MPG >= min_mpg & GP >= GP_FLOOR))
