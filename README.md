@@ -9,5 +9,9 @@ R scripts for scraping and analysing basketball data.
 
 - `bbref/` — scraper functions for Basketball Reference
 - `pbpstats/` — scraper functions for PBP Stats
-- `lineups/` — lineup and player-position analysis
+- `lineups/` — lineup and rotation analysis: five-man `{gt}` tables, minutes and rotation heatmaps, lineup continuity
+- `player-profiling/` — positions, data-driven offensive and defensive styles, and defensive matchup metrics
+- `misc/` — shared helpers (the name-matching merge) and the `{gt}` / `{ggplot2}` theme
 - `shiny-apps/` — code and data behind the Shiny apps
+
+Each folder has its own README with the functions and a quick example. The scrapers go easy on the sites they hit (a shared throttle with automatic back-off), seasons go in as nba.com strings like `"2026-27"` throughout, and most scripts `source()` their helpers straight from this repo on first run.
