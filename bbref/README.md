@@ -13,6 +13,7 @@ Here's what's in the folder:
 | Function | What it does |
 | --- | --- |
 | `bbref_player_stats(season, mode)` | The full player table for a given mode: `totals`, `per_game`, `per36`, `per100`, `advanced`, `play_by_play`, `shooting` or `adj_shooting`. |
+| `bbref_rookies(season)` | The season's rookie class from the "Rookies — Season Stats" page: totals, shooting percentages and the page's per-game columns, plus each player's bbref id and their debut date and box-score id. |
 | `bbref_team_stats(season, mode, side)` | Team or opponent numbers for a mode (`per_game`, `totals`, `per100`, `advanced`, `shooting`). Set `side` to `"team"` or `"opponent"`. |
 | `bbref_standings(season)` | East and West standings: wins, losses, win %, games back, points for and against, SRS. |
 | `bbref_schedule(season)` | Every game in the season with date, both teams, score, OT, attendance and the box-score id. |
@@ -21,13 +22,17 @@ Here's what's in the folder:
 | `bbref_gameid_date(year, month, day)` | Every bbref game id for a given day. |
 | `bbref_game_log(gameID)` | A single game's box score, with starter flags and each player's status (active, inactive, or the DNP reason). |
 
+`bbref_rookies()` is a little different from the rest. The rookies page is one season-aggregate row per player, so there's no team or position column, and nothing to remap or regroup. In exchange you get a few columns pulled straight from the row's links — `PLAYER_ID` (the bbref slug), `DEBUT_DATE` and `DEBUT_GAME_ID` — alongside the totals, the three shooting percentages, and the per-game columns the page already carries (`MPG`, `PTS_PG`, `TRB_PG`, `AST_PG`, `STL_PG`, `BLK_PG`). `YRS` is bbref's season count, so it reads `1` for a genuine first-year player.
+
 A quick example:
 
 ```r
 source("bbref/bbref_helpers.R")
 source("bbref/bbref_player_stats.R")
+source("bbref/bbref_rookies.R")
 
 adv  <- bbref_player_stats("2026-27", mode = "advanced")
+rook <- bbref_rookies("2026-27")
 opp  <- bbref_team_stats("2024-25", mode = "shooting", side = "opponent")
 ids  <- bbref_gameid_date(2025, 4, 13)
 box  <- purrr::map_dfr(ids, bbref_game_log)
